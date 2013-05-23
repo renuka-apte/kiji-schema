@@ -29,21 +29,21 @@ import org.slf4j.LoggerFactory;
 @Aspect
 public class LogTimerAspect {
 
-  @Pointcut("call(* org.kiji.schema.*.*(..))")
+  @Pointcut("execution(* org.kiji.schema.*.*(..))")
   protected void profile(){
   }
 
   @Around("profile()")
-  public void aroundProfileMethods(final ProceedingJoinPoint thisJoinPoint) throws Throwable {
+  public Object aroundProfileMethods(final ProceedingJoinPoint thisJoinPoint) throws Throwable {
     Logger LOG = LoggerFactory.getLogger(thisJoinPoint.getTarget().getClass());
     final long start, end;
     start = System.nanoTime();
-    thisJoinPoint.proceed();
+    Object returnanswer = thisJoinPoint.proceed();
     end = System.nanoTime();
     System.out.println("calledaspect");
     LOG.info("Time taken by : " +  thisJoinPoint.getSignature().toLongString() + " = ");
-    LOG.info(String.format("%l", (end - start) / 1000));
-    LOG.info("us");
+    LOG.info(String.format("%d", (end - start)));
+    LOG.info("ns");
+    return returnanswer;
   }
-
 }
