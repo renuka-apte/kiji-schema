@@ -25,7 +25,9 @@ import java.lang.management.ManagementFactory;
 import java.util.HashMap;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.conf.Configured;
 import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.After;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
@@ -33,15 +35,45 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Aspect
-public class LogTimerAspect {
+public class LogTimerAspect extends Configured {
   private HashMap<String, LoggingInfo> mSignatureTimeMap = null;
   private String mPid;
 
   class LogWriterThread extends Thread {
     @Override
     public void run() {
-      try {
+      /*try {
+      /*  final Path path = new Path("logfile");
+        final FileSystem fs = path.getFileSystem(getConf());
+        try {
+          final FSDataOutputStream fileWriter = fs.append(path);
+          try {
+            fileWriter.write((mPid + "\n").getBytes("UTF-8"));
+            for (String key: mSignatureTimeMap.keySet()) {
+              LoggingInfo loggingInfo = mSignatureTimeMap.get(key);
+              fileWriter.write((key + ", " + loggingInfo.toString() + ", "
+                  + loggingInfo.perCallTime().toString() + "\n").getBytes("UTF-8"));
+            }
+          } finally {
+            fileWriter.close();
+          }
+        } finally {
+          fs.close();
+        }
         FileWriter fileWriter = new FileWriter("/tmp/logfile", true);
+                fileWriter.write(mPid + "\n");
+                for (String key: mSignatureTimeMap.keySet()) {
+                    LoggingInfo loggingInfo = mSignatureTimeMap.get(key);
+                    fileWriter.write(key + ", " + loggingInfo.toString() + ", "
+                            + loggingInfo.perCallTime().toString() + "\n");
+                }
+        } catch (IOException e) {
+        e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+      }
+      }*/
+      FileWriter fileWriter = null;
+      try {
+        fileWriter = new FileWriter("/tmp/logfile", true);
         fileWriter.write(mPid + "\n");
         for (String key: mSignatureTimeMap.keySet()) {
           LoggingInfo loggingInfo = mSignatureTimeMap.get(key);
@@ -105,9 +137,8 @@ public class LogTimerAspect {
     mPid = ManagementFactory.getRuntimeMXBean().getName();
   }
 
-
-
-  @Pointcut("execution(* org.kiji.schema.KijiCellDecoder.*(..))")
+  @Pointcut("execution(* org.kiji.schema.KijiCellDecoder.*(..)) || "
+      + "execution(* org.kiji.schema.KijiCellEncoder.*(..))")
   protected void profile(){
   }
 
@@ -121,10 +152,28 @@ public class LogTimerAspect {
     System.out.println("calledaspect");
     String funcSig = thisJoinPoint.getSignature().toLongString();
     if (!mSignatureTimeMap.containsKey(funcSig)) {
-      mSignatureTimeMap.put(funcSig, new LoggingInfo());
+      mSignatureTimeMap.put(funcSig, new LoggingInfo(end-start, 1));
     } else {
       mSignatureTimeMap.put(funcSig, mSignatureTimeMap.get(funcSig).increment(end-start));
     }
     return returnanswer;
+  }
+
+  @Pointcut("execution(* org.kiji.schema.tools.KijiTool.toolMain(..))")
+  protected void writeResultsLocal() {
+  }
+
+  @After("writeResultsLocal()")
+  public void afterToolMain() {
+    System.out.println("Called after tool");
+  }
+
+  @Pointcut("execution(* org.kiji.mapreduce.KijiMapReduceJob.recordJobHistory(..))")
+  protected void writeResultsMR() {
+  }
+
+  @After("writeResultsMR()")
+  public void afterRecordHistory() {
+    System.out.println("Called in recordJobHistory");
   }
 }
