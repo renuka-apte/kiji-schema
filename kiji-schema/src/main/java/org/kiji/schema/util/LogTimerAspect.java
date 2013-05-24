@@ -19,6 +19,12 @@
 
 package org.kiji.schema.util;
 
+import java.io.FileWriter;
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.util.HashMap;
+
+import com.google.common.base.Preconditions;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -28,8 +34,80 @@ import org.slf4j.LoggerFactory;
 
 @Aspect
 public class LogTimerAspect {
+  private HashMap<String, LoggingInfo> mSignatureTimeMap = null;
+  private String mPid;
 
-  @Pointcut("execution(* org.kiji.schema.*.*(..))")
+  class LogWriterThread extends Thread {
+    @Override
+    public void run() {
+      try {
+        FileWriter fileWriter = new FileWriter("/tmp/logfile", true);
+        fileWriter.write(mPid + "\n");
+        for (String key: mSignatureTimeMap.keySet()) {
+          LoggingInfo loggingInfo = mSignatureTimeMap.get(key);
+          fileWriter.write(key + ", " + loggingInfo.toString() + ", "
+              + loggingInfo.perCallTime().toString() + "\n");
+        }
+        fileWriter.close();
+      } catch (IOException e) {
+        e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+      }
+    }
+  }
+
+  class LoggingInfo {
+    private Long mAggregateTime;
+    private Integer mNumInvoked;
+
+    LoggingInfo() {
+      mAggregateTime = 0L;
+      mNumInvoked = 0;
+    }
+
+    LoggingInfo(long aggregateTime, int timesInvoked) {
+      mAggregateTime = aggregateTime;
+      mNumInvoked = timesInvoked;
+    }
+
+    LoggingInfo(String encoded) {
+      String[] parts = encoded.split(", ");
+      mAggregateTime = Long.decode(parts[0]);
+      mNumInvoked = Integer.decode(parts[1]);
+    }
+
+    @Override
+    public String toString() {
+      return mAggregateTime.toString() + "," + mNumInvoked.toString();
+    }
+
+    public LoggingInfo increment(long addToTime) {
+      Preconditions.checkArgument(addToTime >= 0);
+      mAggregateTime += addToTime;
+      mNumInvoked += 1;
+      return this;
+    }
+
+    public LoggingInfo increment(long addToTime, int addToInvoked) {
+      Preconditions.checkArgument(addToTime >=0 && addToInvoked >= 0);
+      mAggregateTime += addToTime;
+      mNumInvoked += addToInvoked;
+      return this;
+    }
+
+    public Float perCallTime() {
+      return mAggregateTime/mNumInvoked.floatValue();
+    }
+  }
+
+  protected LogTimerAspect() {
+    Runtime.getRuntime( ).addShutdownHook(new LogWriterThread());
+    mSignatureTimeMap = new HashMap<String, LoggingInfo>();
+    mPid = ManagementFactory.getRuntimeMXBean().getName();
+  }
+
+
+
+  @Pointcut("execution(* org.kiji.schema.KijiCellDecoder.*(..))")
   protected void profile(){
   }
 
@@ -41,9 +119,12 @@ public class LogTimerAspect {
     Object returnanswer = thisJoinPoint.proceed();
     end = System.nanoTime();
     System.out.println("calledaspect");
-    LOG.info("Time taken by : " +  thisJoinPoint.getSignature().toLongString() + " = ");
-    LOG.info(String.format("%d", (end - start)));
-    LOG.info("ns");
+    String funcSig = thisJoinPoint.getSignature().toLongString();
+    if (!mSignatureTimeMap.containsKey(funcSig)) {
+      mSignatureTimeMap.put(funcSig, new LoggingInfo());
+    } else {
+      mSignatureTimeMap.put(funcSig, mSignatureTimeMap.get(funcSig).increment(end-start));
+    }
     return returnanswer;
   }
 }
