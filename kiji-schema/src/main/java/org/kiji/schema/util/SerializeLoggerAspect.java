@@ -21,6 +21,7 @@ package org.kiji.schema.util;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.util.HashMap;
 
 import org.aspectj.lang.Aspects;
@@ -28,13 +29,21 @@ import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.After;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
-import sun.management.ManagementFactory;
 
+/**
+ * This aspect is invoked after the main function in any Kiji tool. It
+ * accesses logging information gathered by the LogTimerAspect and
+ * serializes it to a local file.
+ */
 @Aspect
 public class SerializeLoggerAspect {
   private String mPid;
   private LogTimerAspect mLogTimerAspect;
 
+  /**
+   * Default constructor. Initializes the pid of the JVM running the tool
+   * and the singleton LogTimerAspect for this JVM instance.
+   */
   protected SerializeLoggerAspect() {
     mPid = ManagementFactory.getRuntimeMXBean().getName();
     if (Aspects.hasAspect(LogTimerAspect.class)) {
@@ -44,10 +53,17 @@ public class SerializeLoggerAspect {
     }
   }
 
+  /**
+   * PointCut for toolMain function of KijiTool.
+   */
   @Pointcut("execution(* org.kiji.schema.tools.KijiTool.toolMain(..))")
   protected void writeResultsLocal() {
   }
 
+  /**
+   * Advice for running after any functions that match PointCut "writeResultsLocal".
+   * @param thisJoinPoint The joinpoint that matched the pointcut.
+   */
   @After("writeResultsLocal()")
   public void afterToolMain(final JoinPoint thisJoinPoint) {
     FileWriter fileWriter = null;
@@ -64,7 +80,7 @@ public class SerializeLoggerAspect {
       }
       fileWriter.close();
     } catch (IOException e) {
-      e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+      e.printStackTrace();
     }
   }
 }
