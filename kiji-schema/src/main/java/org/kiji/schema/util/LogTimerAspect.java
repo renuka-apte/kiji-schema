@@ -26,74 +26,75 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+/**
+ * Aspect to measure encoding and decoding of Kiji cells and time spent
+ * accessing the meta table.
+ */
 @Aspect
 public class LogTimerAspect {
+  /**
+   * The HashMap containing information about a function call, the aggregate
+   * time spent within this function and the number of times it was invoked.
+   */
   private HashMap<String, LoggingInfo> mSignatureTimeMap = null;
 
-  /*class LogWriterThread extends Thread {
-    @Override
-    public void run() {
-      try {
-      /*  final Path path = new Path("logfile");
-        final FileSystem fs = path.getFileSystem(getConf());
-        try {
-          final FSDataOutputStream fileWriter = fs.append(path);
-          try {
-            fileWriter.write((mPid + "\n").getBytes("UTF-8"));
-            for (String key: mSignatureTimeMap.keySet()) {
-              LoggingInfo loggingInfo = mSignatureTimeMap.get(key);
-              fileWriter.write((key + ", " + loggingInfo.toString() + ", "
-                  + loggingInfo.perCallTime().toString() + "\n").getBytes("UTF-8"));
-            }
-          } finally {
-            fileWriter.close();
-          }
-        } finally {
-          fs.close();
-        }
-        FileWriter fileWriter = new FileWriter("/tmp/logfile", true);
-                fileWriter.write(mPid + "\n");
-                for (String key: mSignatureTimeMap.keySet()) {
-                    LoggingInfo loggingInfo = mSignatureTimeMap.get(key);
-                    fileWriter.write(key + ", " + loggingInfo.toString() + ", "
-                            + loggingInfo.perCallTime().toString() + "\n");
-                }
-        } catch (IOException e) {
-        e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-      }
-      }
-
-    }
-  }    */
-
+  /**
+   * The LoggingInfo class stores the information such as aggregate
+   * time taken by all invocations of a function in nanoseconds and how
+   * many times it was invoked.
+   */
   class LoggingInfo {
     private Long mAggregateTime;
     private Integer mNumInvoked;
 
+    /**
+     * Default constructor.
+     */
     LoggingInfo() {
       mAggregateTime = 0L;
       mNumInvoked = 0;
     }
 
+    /**
+     * Constructor for LoggingInfo.
+     *
+     * @param aggregateTime nanoseconds spent so far in a function call.
+     * @param timesInvoked number of times function was invoked so far.
+     */
     LoggingInfo(long aggregateTime, int timesInvoked) {
       mAggregateTime = aggregateTime;
       mNumInvoked = timesInvoked;
     }
 
-    LoggingInfo(String encoded) throws ClassNotFoundException {
+    /**
+     * Decode a string into {@link LoggingInfo}.
+     *
+     * @param encoded the string to be decoded.
+     */
+    LoggingInfo(String encoded) {
       String[] parts = encoded.split(", ");
       mAggregateTime = Long.decode(parts[0]);
       mNumInvoked = Integer.decode(parts[1]);
     }
 
+    /**
+     * Encode the contents of this instance into a string.
+     *
+     * @return encoded string for the contents.
+     */
     @Override
     public String toString() {
       return mAggregateTime.toString() + "," + mNumInvoked.toString();
     }
 
+    /**
+     * Add to the aggregate time of a function call. By default this means
+     * we are adding 1 to the number of method invocations.
+     *
+     * @param addToTime nanoseconds to add to the aggregate time spent in a function.
+     * @return this LoggingInfo instance.
+     */
     public LoggingInfo increment(long addToTime) {
       Preconditions.checkArgument(addToTime >= 0);
       mAggregateTime += addToTime;
@@ -101,34 +102,63 @@ public class LogTimerAspect {
       return this;
     }
 
+    /**
+     * Add to the aggregate time spent in a function and number of times it is invoked.
+     *
+     * @param addToTime nanoseconds to add to the total time spent in a function.
+     * @param addToInvoked add to the number of times function was invoked.
+     * @return this LoggingInfo instance.
+     */
     public LoggingInfo increment(long addToTime, int addToInvoked) {
-      Preconditions.checkArgument(addToTime >=0 && addToInvoked >= 0);
+      Preconditions.checkArgument(addToTime >= 0 && addToInvoked >= 0);
       mAggregateTime += addToTime;
       mNumInvoked += addToInvoked;
       return this;
     }
 
+    /**
+     * Get time spent per function invocation.
+     *
+     * @return the average time taken per call in nanoseconds.
+     */
     public Float perCallTime() {
-      return mAggregateTime/mNumInvoked.floatValue();
+      return mAggregateTime / mNumInvoked.floatValue();
     }
   }
 
+  /**
+   * Default constructor.
+   */
   protected LogTimerAspect() {
     mSignatureTimeMap = new HashMap<String, LoggingInfo>();
   }
 
+  /**
+   * Get the HashMap of functions to information stored about them.
+   *
+   * @return HashMap containing function calls and time spent in them.
+   */
   public HashMap<String, LoggingInfo> getSignatureTimeMap() {
     return mSignatureTimeMap;
   }
 
+  /**
+   * Pointcut for Kiji encoder and decoder.
+   */
   @Pointcut("execution(* org.kiji.schema.KijiCellDecoder.*(..)) || "
       + "execution(* org.kiji.schema.KijiCellEncoder.*(..))")
   protected void profile(){
   }
 
+  /**
+   * Advice around functions that match PointCut "profile".
+   *
+   * @param thisJoinPoint The JoinPoint that matched the pointcut.
+   * @return Object returned by function which matched PointCut "profile".
+   * @throws Throwable if there is an exception in the function the advice surrounds.
+   */
   @Around("profile()")
   public Object aroundProfileMethods(final ProceedingJoinPoint thisJoinPoint) throws Throwable {
-    Logger LOG = LoggerFactory.getLogger(thisJoinPoint.getTarget().getClass());
     final long start, end;
     start = System.nanoTime();
     Object returnanswer = thisJoinPoint.proceed();
@@ -136,9 +166,9 @@ public class LogTimerAspect {
     System.out.println("calledaspect");
     String funcSig = thisJoinPoint.getSignature().toLongString();
     if (!mSignatureTimeMap.containsKey(funcSig)) {
-      mSignatureTimeMap.put(funcSig, new LoggingInfo(end-start, 1));
+      mSignatureTimeMap.put(funcSig, new LoggingInfo(end - start, 1));
     } else {
-      mSignatureTimeMap.put(funcSig, mSignatureTimeMap.get(funcSig).increment(end-start));
+      mSignatureTimeMap.put(funcSig, mSignatureTimeMap.get(funcSig).increment(end - start));
     }
     return returnanswer;
   }
