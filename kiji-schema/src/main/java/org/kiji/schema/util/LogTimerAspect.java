@@ -27,10 +27,13 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 
+import org.kiji.annotations.ApiAudience;
+
 /**
  * Aspect to measure encoding and decoding of Kiji cells and time spent
  * accessing the meta table.
  */
+@ApiAudience.Framework
 @Aspect
 public class LogTimerAspect {
   /**
@@ -44,7 +47,8 @@ public class LogTimerAspect {
    * time taken by all invocations of a function in nanoseconds and how
    * many times it was invoked.
    */
-  class LoggingInfo {
+  @ApiAudience.Framework
+  public final class LoggingInfo {
     private Long mAggregateTime;
     private Integer mNumInvoked;
 

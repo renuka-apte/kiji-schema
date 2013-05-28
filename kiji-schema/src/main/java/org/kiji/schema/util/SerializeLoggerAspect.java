@@ -23,6 +23,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.HashMap;
+import java.util.Map;
 
 import org.aspectj.lang.Aspects;
 import org.aspectj.lang.JoinPoint;
@@ -54,31 +55,37 @@ public class SerializeLoggerAspect {
   }
 
   /**
-   * PointCut for toolMain function of KijiTool.
-   */
-  @Pointcut("execution(* org.kiji.schema.tools.KijiTool.toolMain(..))")
-  protected void writeResultsLocal() {
-  }
+   * Pointcut attached to toolMain of KijiTool.
+   *
+   * @param args Arguments to KijiTool.
+
+  @Pointcut("")
+  protected void writeResultsLocal(String[] args){
+  }*/
 
   /**
    * Advice for running after any functions that match PointCut "writeResultsLocal".
+   *
+   * @param toolArgs Variable length of arguments passed to KijiTool.
    * @param thisJoinPoint The joinpoint that matched the pointcut.
    */
-  @After("writeResultsLocal()")
-  public void afterToolMain(final JoinPoint thisJoinPoint) {
+  @After("execution(* org.kiji.schema.tools.KijiTool.toolMain(String[])) && args(toolArgs)")
+  public void afterToolMain(String[] toolArgs, final JoinPoint thisJoinPoint) {
     FileWriter fileWriter = null;
     try {
       fileWriter = new FileWriter("/tmp/logfile", true);
-      fileWriter.write(mPid + "\n");
-      HashMap<String, LogTimerAspect.LoggingInfo> signatureTimeMap =
-          mLogTimerAspect.getSignatureTimeMap();
-      for (String key: signatureTimeMap.keySet()) {
-        LogTimerAspect.LoggingInfo loggingInfo = signatureTimeMap.get(key);
-        fileWriter.write("In tool: " + thisJoinPoint.getSignature().toLongString()
-            + ", Function: " + key + ", " + loggingInfo.toString() + ", "
-            + loggingInfo.perCallTime().toString() + "\n");
+      try {
+        fileWriter.write(mPid + "\n");
+        HashMap<String, LogTimerAspect.LoggingInfo> signatureTimeMap =
+            mLogTimerAspect.getSignatureTimeMap();
+        for (Map.Entry<String, LogTimerAspect.LoggingInfo> entrySet: signatureTimeMap.entrySet()) {
+          fileWriter.write("In tool: " + thisJoinPoint.getSignature().toLongString()
+              + ", Function: " + entrySet.getKey() + ", " + entrySet.getValue().toString() + ", "
+              + entrySet.getValue().perCallTime().toString() + "\n");
+        }
+      } finally {
+        fileWriter.close();
       }
-      fileWriter.close();
     } catch (IOException e) {
       e.printStackTrace();
     }
