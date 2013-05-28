@@ -57,7 +57,7 @@ public class SerializeLoggerAspect {
    *
    * @param thisJoinPoint The joinpoint that matched the pointcut.
    */
-  @AfterReturning("call(* org.kiji.schema.tools.KijiTool.toolMain(List<String>))")
+  @AfterReturning("call(* org.kiji.schema.tools.KijiTool.toolMain(..))")
   public void afterToolMain(final JoinPoint thisJoinPoint) {
     try {
       FileOutputStream fos = new FileOutputStream("/tmp/logfile", true);

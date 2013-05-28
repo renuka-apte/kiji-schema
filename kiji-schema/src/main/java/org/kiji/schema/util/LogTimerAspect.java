@@ -24,7 +24,6 @@ import java.util.HashMap;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.Pointcut;
 
 import org.kiji.annotations.ApiAudience;
 
@@ -59,11 +58,11 @@ public class LogTimerAspect {
 
   /**
    * Pointcut for Kiji encoder and decoder.
-   */
-  @Pointcut("execution(* org.kiji.schema.KijiCellDecoder.*(..)) || "
+   *
+  //@Pointcut("execution(* org.kiji.schema.KijiCellDecoder.*(..)) || "
       + "execution(* org.kiji.schema.KijiCellEncoder.*(..))")
   protected void profile(){
-  }
+  }    */
 
   /**
    * Advice around functions that match PointCut "profile".
@@ -72,13 +71,13 @@ public class LogTimerAspect {
    * @return Object returned by function which matched PointCut "profile".
    * @throws Throwable if there is an exception in the function the advice surrounds.
    */
-  @Around("profile()")
+  @Around("execution(* org.kiji.schema.KijiCellDecoder.*(..)) || "
+      + "execution(* org.kiji.schema.KijiCellEncoder.*(..))")
   public Object aroundProfileMethods(final ProceedingJoinPoint thisJoinPoint) throws Throwable {
     final long start, end;
     start = System.nanoTime();
     Object returnanswer = thisJoinPoint.proceed();
     end = System.nanoTime();
-    System.out.println("calledaspect");
     String funcSig = thisJoinPoint.getSignature().toLongString();
     if (!mSignatureTimeMap.containsKey(funcSig)) {
       mSignatureTimeMap.put(funcSig, new LoggingInfo(end - start, 1));
