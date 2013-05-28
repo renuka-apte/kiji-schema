@@ -19,17 +19,15 @@
 
 package org.kiji.schema.util;
 
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.lang.management.ManagementFactory;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.aspectj.lang.Aspects;
 import org.aspectj.lang.JoinPoint;
-import org.aspectj.lang.annotation.After;
+import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.Pointcut;
 
 /**
  * This aspect is invoked after the main function in any Kiji tool. It
@@ -55,39 +53,35 @@ public class SerializeLoggerAspect {
   }
 
   /**
-   * Pointcut attached to toolMain of KijiTool.
-   *
-   * @param args Arguments to KijiTool.
-
-  @Pointcut("")
-  protected void writeResultsLocal(String[] args){
-  }*/
-
-  /**
    * Advice for running after any functions that match PointCut "writeResultsLocal".
    *
-   * @param toolArgs Variable length of arguments passed to KijiTool.
    * @param thisJoinPoint The joinpoint that matched the pointcut.
    */
-  @After("execution(* org.kiji.schema.tools.KijiTool.toolMain(String[])) && args(toolArgs)")
-  public void afterToolMain(String[] toolArgs, final JoinPoint thisJoinPoint) {
-    FileWriter fileWriter = null;
+  @AfterReturning("call(* org.kiji.schema.tools.KijiTool.toolMain(List<String>))")
+  public void afterToolMain(final JoinPoint thisJoinPoint) {
     try {
-      fileWriter = new FileWriter("/tmp/logfile", true);
+      FileOutputStream fos = new FileOutputStream("/tmp/logfile", true);
       try {
-        fileWriter.write(mPid + "\n");
-        HashMap<String, LogTimerAspect.LoggingInfo> signatureTimeMap =
-            mLogTimerAspect.getSignatureTimeMap();
-        for (Map.Entry<String, LogTimerAspect.LoggingInfo> entrySet: signatureTimeMap.entrySet()) {
-          fileWriter.write("In tool: " + thisJoinPoint.getSignature().toLongString()
-              + ", Function: " + entrySet.getKey() + ", " + entrySet.getValue().toString() + ", "
-              + entrySet.getValue().perCallTime().toString() + "\n");
+        OutputStreamWriter out = new OutputStreamWriter(fos, "UTF-8");
+        try {
+          out.write(mPid + "\n");
+          HashMap<String, LoggingInfo> signatureTimeMap =
+              mLogTimerAspect.getSignatureTimeMap();
+          for (Map.Entry<String, LoggingInfo> entrySet: signatureTimeMap.entrySet()) {
+            out.write("In tool: " + thisJoinPoint.getSignature().toLongString()
+                + ", Function: " + entrySet.getKey() + ", " + entrySet.getValue().toString() + ", "
+                + entrySet.getValue().perCallTime().toString() + "\n");
+          }
+        } finally {
+          out.close();
         }
+      } catch (UnsupportedEncodingException e) {
+        e.printStackTrace();
       } finally {
-        fileWriter.close();
+        fos.close();
       }
-    } catch (IOException e) {
-      e.printStackTrace();
+    } catch (IOException fnf) {
+      fnf.printStackTrace();
     }
   }
 }
