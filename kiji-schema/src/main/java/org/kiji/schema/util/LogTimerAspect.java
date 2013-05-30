@@ -72,7 +72,9 @@ public class LogTimerAspect {
    * @throws Throwable if there is an exception in the function the advice surrounds.
    */
   @Around("execution(* org.kiji.schema.KijiCellDecoder.*(..)) || "
-      + "execution(* org.kiji.schema.KijiCellEncoder.*(..))")
+      + "execution(* org.kiji.schema.KijiCellEncoder.*(..)) || "
+      + "execution(* org.kiji.schema.KijiMetaTable.*(..)) || "
+      + "execution(* org.kiji.schema.KijiSchemaTable.*(..))")
   public Object aroundProfileMethods(final ProceedingJoinPoint thisJoinPoint) throws Throwable {
     final long start, end;
     start = System.nanoTime();
