@@ -19,15 +19,23 @@
 
 package org.kiji.schema.util;
 
-import java.io.*;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
 import java.lang.management.ManagementFactory;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.aspectj.lang.Aspects;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Pointcut;
 
 /**
  * This aspect is invoked after the main function in any Kiji tool. It
@@ -53,23 +61,42 @@ public class SerializeLoggerAspect {
   }
 
   /**
-   * Advice for running after any functions that match PointCut "writeResultsLocal".
+   * Pointcut to match the toolMain function of BaseTool.
+   */
+  @Pointcut("call(* org.kiji.schema.tools.BaseTool.toolMain(..))")
+  protected void serializeTool(){
+  }
+
+  /**
+   * Advice for running after any functions that match PointCut "serializeTool".
    *
    * @param thisJoinPoint The joinpoint that matched the pointcut.
    */
-  @AfterReturning("call(* org.kiji.schema.tools.KijiTool.toolMain(..))")
+  @AfterReturning("serializeTool() && !cflowbelow(serializeTool())")
   public void afterToolMain(final JoinPoint thisJoinPoint) {
     try {
-      FileOutputStream fos = new FileOutputStream("/tmp/logfile", true);
+      Pattern p = Pattern.compile(".*\\.(\\w+)\\.toolMain.*");
+      Matcher m = p.matcher(thisJoinPoint.getSignature().toLongString());
+      String signature;
+      if (m.matches()) {
+        signature = m.group(1);
+      } else {
+        signature = thisJoinPoint.getSignature().toLongString();
+      }
+      String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmm")
+          .format(Calendar.getInstance().getTime());
+      String filename = "/tmp/kijistats_" + timeStamp + "_" + mPid + "_" + signature + ".csv";
+      FileOutputStream fos = new FileOutputStream(filename, true);
       try {
         OutputStreamWriter out = new OutputStreamWriter(fos, "UTF-8");
         try {
-          out.write(mPid + "\n");
+          out.write("Process Id, Tool Name, Function Signature, Aggregate Time (nanoseconds), "
+              + "Number of Invocations, Time per call (nanoseconds)\n");
           HashMap<String, LoggingInfo> signatureTimeMap =
               mLogTimerAspect.getSignatureTimeMap();
           for (Map.Entry<String, LoggingInfo> entrySet: signatureTimeMap.entrySet()) {
-            out.write("In tool: " + thisJoinPoint.getSignature().toLongString()
-                + ", Function: " + entrySet.getKey() + ", " + entrySet.getValue().toString() + ", "
+            out.write(mPid + ", " + signature + ", "
+                + entrySet.getKey() + ", " + entrySet.getValue().toString() + ", "
                 + entrySet.getValue().perCallTime().toString() + "\n");
           }
         } finally {
