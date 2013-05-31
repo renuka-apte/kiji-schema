@@ -57,14 +57,6 @@ public class LogTimerAspect {
   }
 
   /**
-   * Pointcut for Kiji encoder and decoder.
-   *
-  //@Pointcut("execution(* org.kiji.schema.KijiCellDecoder.*(..)) || "
-      + "execution(* org.kiji.schema.KijiCellEncoder.*(..))")
-  protected void profile(){
-  }    */
-
-  /**
    * Advice around functions that match PointCut "profile".
    *
    * @param thisJoinPoint The JoinPoint that matched the pointcut.
