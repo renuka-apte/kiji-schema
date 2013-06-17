@@ -1,5 +1,5 @@
 /**
- * (c) Copyright 2012 WibiData, Inc.
+ * (c) Copyright 2013 WibiData, Inc.
  *
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,6 +22,7 @@ package org.kiji.schema.util;
 import com.google.common.base.Preconditions;
 
 import org.kiji.annotations.ApiAudience;
+import org.kiji.annotations.ApiStability;
 
 /**
  * The LoggingInfo class stores the information such as aggregate
@@ -29,9 +30,10 @@ import org.kiji.annotations.ApiAudience;
  * many times it was invoked.
  */
 @ApiAudience.Framework
+@ApiStability.Experimental
 public final class LoggingInfo {
-  private Long mAggregateTime;
-  private Integer mNumInvoked;
+  private long mAggregateTime;
+  private int mNumInvoked;
 
   /**
    * Default constructor.
@@ -70,7 +72,7 @@ public final class LoggingInfo {
    */
   @Override
   public String toString() {
-    return mAggregateTime.toString() + "," + mNumInvoked.toString();
+    return String.valueOf(mAggregateTime) + "," + String.valueOf(mNumInvoked);
   }
 
   /**
@@ -107,6 +109,6 @@ public final class LoggingInfo {
    * @return the average time taken per call in nanoseconds.
    */
   public Float perCallTime() {
-    return mAggregateTime / mNumInvoked.floatValue();
+    return mAggregateTime / (float)mNumInvoked;
   }
 }

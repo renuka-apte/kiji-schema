@@ -1,5 +1,5 @@
 /**
- * (c) Copyright 2012 WibiData, Inc.
+ * (c) Copyright 2013 WibiData, Inc.
  *
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,32 +19,34 @@
 
 package org.kiji.schema.util;
 
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 
 import org.kiji.annotations.ApiAudience;
+import org.kiji.annotations.ApiStability;
 
 /**
  * Aspect to measure encoding and decoding of Kiji cells and time spent
  * accessing the meta table.
  */
 @ApiAudience.Framework
+@ApiStability.Experimental
 @Aspect
 public class LogTimerAspect {
   /**
-   * The HashMap containing information about a function call, the aggregate
+   * The ConcurrentHashMap containing information about a function call, the aggregate
    * time spent within this function and the number of times it was invoked.
    */
-  private HashMap<String, LoggingInfo> mSignatureTimeMap = null;
+  private ConcurrentHashMap<String, LoggingInfo> mSignatureTimeMap = null;
 
   /**
    * Default constructor.
    */
   protected LogTimerAspect() {
-    mSignatureTimeMap = new HashMap<String, LoggingInfo>();
+    mSignatureTimeMap = new ConcurrentHashMap<String, LoggingInfo>();
   }
 
   /**
@@ -52,7 +54,7 @@ public class LogTimerAspect {
    *
    * @return HashMap containing function calls and time spent in them.
    */
-  public HashMap<String, LoggingInfo> getSignatureTimeMap() {
+  public ConcurrentHashMap<String, LoggingInfo> getSignatureTimeMap() {
     return mSignatureTimeMap;
   }
 
