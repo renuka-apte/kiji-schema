@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.lang.management.ManagementFactory;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Map;
@@ -118,10 +119,16 @@ public class SerializeLoggerAspect {
               + "Number of Invocations, Time per call (nanoseconds)\n");
           ConcurrentHashMap<String, LoggingInfo> signatureTimeMap =
               mLogTimerAspect.getSignatureTimeMap();
+          // ensure that files do not end up with x.yzE7 format for floats
+          NumberFormat nf = NumberFormat.getInstance();
+          nf.setGroupingUsed(false);
+          nf.setMinimumFractionDigits(1);
+          nf.setMaximumFractionDigits(3);
+
           for (Map.Entry<String, LoggingInfo> entrySet: signatureTimeMap.entrySet()) {
             out.write(mPid + ", " + signature + ", "
                 + entrySet.getKey() + ", " + entrySet.getValue().toString() + ", "
-                + entrySet.getValue().perCallTime().toString() + "\n");
+                + nf.format(entrySet.getValue().perCallTime()) + "\n");
           }
         } finally {
           out.close();
