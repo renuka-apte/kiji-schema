@@ -111,4 +111,22 @@ public final class LoggingInfo {
   public Float perCallTime() {
     return mAggregateTime / (float)mNumInvoked;
   }
+
+  /**
+   * Gets the aggregate time spent in this function.
+   *
+   * @return The aggregate time spent in the function as a long.
+   */
+  public long getAggregateTime() {
+    return mAggregateTime;
+  }
+
+  /**
+   * Gets the number of times this function was invoked.
+   *
+   * @return The number of times this function was invoked as an int.
+   */
+  public int getNumInvoked() {
+    return mNumInvoked;
+  }
 }
