@@ -78,7 +78,7 @@ public class LogTimerAspect {
     if (!mSignatureTimeMap.containsKey(funcSig)) {
       mSignatureTimeMap.put(funcSig, new LoggingInfo(end - start, 1));
     } else {
-      mSignatureTimeMap.put(funcSig, mSignatureTimeMap.get(funcSig).increment(end - start));
+      mSignatureTimeMap.get(funcSig).increment(end - start);
     }
     return returnanswer;
   }

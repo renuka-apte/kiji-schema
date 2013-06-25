@@ -44,7 +44,7 @@ import org.kiji.annotations.ApiStability;
 /**
  * This aspect is invoked after the main function in any Kiji tool. It
  * accesses logging information gathered by the LogTimerAspect and
- * serializes it to a local file.
+ * serializes it to a local csv file.
  */
 @ApiAudience.Framework
 @ApiStability.Experimental
@@ -52,6 +52,9 @@ import org.kiji.annotations.ApiStability;
 public class SerializeLoggerAspect {
   private String mPid;
   private LogTimerAspect mLogTimerAspect;
+  /**
+   * The directory prefix to which the profiling output will be saved.
+   */
   private static final String PROFILE_OUTPUT_DIR = "/tmp/kijistats_";
 
   /**
