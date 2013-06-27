@@ -243,6 +243,12 @@
       <artifactId>slf4j-api</artifactId>
     </dependency>
     <dependency>
+      <groupId>spy</groupId>
+      <artifactId>spymemcached</artifactId>
+      <version>2.8.1</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <!-- Since we override aspects of slf4j's behavior at compile time, use compile scope. -->
       <!-- Important: We included code from slf4j 1.7.2 in kiji-schema; do not upgrade -->
       <!-- unless you also reflect that in our source code. (SCHEMA-287) -->

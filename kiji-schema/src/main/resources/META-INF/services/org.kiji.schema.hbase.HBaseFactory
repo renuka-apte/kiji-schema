@@ -1,1 +1,2 @@
+org.kiji.schema.impl.CachedHBaseFactory
 org.kiji.schema.impl.DefaultHBaseFactory
